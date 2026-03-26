@@ -303,7 +303,12 @@ async function sendOwnerNotification(item, tipus, statusz) {
   try {
     // Tulajdonos emailjét a auth.users táblából kellene kérni,
     // de anon key-jel nem érhető el – ezért a foglalasi_email-re küldjük
-    const toEmail = item.foglalasi_email || null;
+    // Pályánál a helyszín foglalasi_email-jét használjuk ha nincs saját
+    let toEmail = item.foglalasi_email || null;
+    if (!toEmail && tipus === 'palya' && item.helyszin_id) {
+      const { data: h } = await sb.from('helyszinek').select('foglalasi_email').eq('id', item.helyszin_id).single();
+      toEmail = h?.foglalasi_email || null;
+    }
     if (!toEmail) return;
 
     const approved = statusz === 'jovahagyva';

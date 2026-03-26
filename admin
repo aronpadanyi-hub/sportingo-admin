@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sportingo Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{--blue:#1a8fc1;--green:#2dbf7e;--grad:linear-gradient(135deg,var(--blue),var(--green));--dark:#0a1628;--text:#1a2e3b;--muted:#6b8a9a;--border:#d4e8f0;--bg:#f0f7fb;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);}
+
+    /* LOGIN */
+    #loginPage{display:flex;width:100%;min-height:100vh;align-items:center;justify-content:center;}
+    .login-box{background:white;border-radius:20px;padding:2.5rem;width:100%;max-width:380px;box-shadow:0 8px 40px rgba(10,22,40,.1);border:1.5px solid var(--border);}
+    .login-logo{display:flex;align-items:center;gap:10px;margin-bottom:1.5rem;}
+    .login-logo-icon{width:40px;height:40px;background:var(--grad);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
+    .login-logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:var(--dark);}
+    .login-logo-badge{font-size:.65rem;background:#ef4444;color:white;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:4px;letter-spacing:.5px;text-transform:uppercase;}
+    .login-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.3rem;color:var(--dark);margin-bottom:4px;}
+    .login-sub{font-size:.83rem;color:var(--muted);margin-bottom:1.5rem;}
+    .input-wrap{position:relative;margin-bottom:1rem;}
+    .input-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:.9rem;pointer-events:none;}
+    .login-input{width:100%;padding:11px 14px 11px 38px;border:1.5px solid var(--border);border-radius:10px;font-size:.88rem;color:var(--text);background:white;outline:none;transition:border-color .2s;font-family:'Plus Jakarta Sans',sans-serif;}
+    .login-input:focus{border-color:var(--blue);}
+    .btn-login{width:100%;padding:12px;background:var(--grad);color:white;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;}
+    .alert{padding:10px 14px;border-radius:8px;font-size:.83rem;margin-bottom:1rem;display:none;}
+    .alert.error{background:#fff5f5;border:1px solid #fed7d7;color:#e53e3e;display:block;}
+
+    /* APP */
+    #appPage{display:none;}
+    .header{background:var(--dark);padding:0 2rem;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+    .header-logo{display:flex;align-items:center;gap:10px;font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;color:white;}
+    .header-logo-icon{width:30px;height:30px;background:var(--grad);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.85rem;}
+    .admin-badge{font-size:.62rem;background:#ef4444;color:white;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.5px;}
+    .header-right{display:flex;align-items:center;gap:10px;}
+    .user-chip{font-size:.8rem;color:rgba(255,255,255,.6);background:rgba(255,255,255,.08);padding:5px 12px;border-radius:20px;}
+    .btn-logout{padding:6px 14px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.12);border-radius:8px;cursor:pointer;font-size:.78rem;font-family:'Plus Jakarta Sans',sans-serif;}
+    .btn-logout:hover{background:rgba(255,255,255,.15);color:white;}
+
+    .main{max-width:1000px;margin:0 auto;padding:2rem;}
+    .tabs{display:flex;gap:8px;margin-bottom:2rem;border-bottom:2px solid var(--border);padding-bottom:0;}
+    .tab{padding:10px 20px;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer;border:none;background:transparent;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;}
+    .tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+    .tab-badge{background:var(--blue);color:white;font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:6px;}
+    .tab-badge.orange{background:#f59e0b;}
+
+    .section{display:none;}.section.active{display:block;}
+    .section-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;color:var(--dark);margin-bottom:1rem;}
+
+    /* CARDS */
+    .item-card{background:white;border:1.5px solid var(--border);border-radius:14px;padding:1.25rem;margin-bottom:.75rem;transition:all .2s;}
+    .item-card.varakozik{border-left:4px solid #f59e0b;}
+    .item-card.jovahagyva{border-left:4px solid var(--green);}
+    .item-card.elutasitva{border-left:4px solid #ef4444;opacity:.7;}
+    .item-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:.75rem;}
+    .item-name{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--dark);}
+    .item-meta{font-size:.8rem;color:var(--muted);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap;}
+    .status-pill{font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;}
+    .status-pill.varakozik{background:#fff8e1;color:#f59e0b;}
+    .status-pill.jovahagyva{background:#e8f5ee;color:var(--green);}
+    .status-pill.elutasitva{background:#fff5f5;color:#ef4444;}
+    .item-details{background:var(--bg);border-radius:8px;padding:.75rem 1rem;font-size:.82rem;color:var(--text);margin-bottom:.75rem;display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;}
+    .item-details span{color:var(--muted);}
+    .item-actions{display:flex;gap:8px;flex-wrap:wrap;}
+    .btn-approve{padding:8px 18px;background:var(--green);color:white;border:none;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s;}
+    .btn-approve:hover{background:#1a9960;}
+    .btn-reject{padding:8px 18px;background:white;color:#ef4444;border:1.5px solid #ef4444;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s;}
+    .btn-reject:hover{background:#fff5f5;}
+    .btn-undo{padding:8px 18px;background:white;color:var(--muted);border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+
+    .empty-state{text-align:center;padding:3rem 2rem;color:var(--muted);background:white;border-radius:14px;border:1.5px solid var(--border);}
+    .empty-icon{font-size:2.5rem;margin-bottom:.75rem;}
+    .empty-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--dark);}
+
+    .toast{position:fixed;bottom:24px;right:24px;background:var(--dark);color:white;padding:12px 20px;border-radius:12px;font-size:.88rem;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.3);transform:translateY(80px);opacity:0;transition:all .3s;z-index:999;}
+    .toast.show{transform:translateY(0);opacity:1;}
+    .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+
+<div id="loginPage">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-icon">⚽</div>
+      <div class="login-logo-text">Sportingo</div>
+      <div class="login-logo-badge">ADMIN</div>
+    </div>
+    <div class="login-title">Admin belépés</div>
+    <div class="login-sub">Csak admin felhasználók számára.</div>
+    <div class="alert" id="loginAlert"></div>
+    <div class="input-wrap"><span class="input-icon">✉️</span><input type="email" class="login-input" id="emailInput" placeholder="Email cím"></div>
+    <div class="input-wrap"><span class="input-icon">🔒</span><input type="password" class="login-input" id="passwordInput" placeholder="Jelszó" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn-login" onclick="doLogin()">Belépés →</button>
+  </div>
+</div>
+
+<div id="appPage">
+  <div class="header">
+    <div class="header-logo">
+      <div class="header-logo-icon">⚽</div>
+      Sportingo
+      <span class="admin-badge">ADMIN</span>
+    </div>
+    <div class="header-right">
+      <div class="user-chip" id="userChip"></div>
+      <button class="btn-logout" onclick="doLogout()">Kilépés</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('helyszinek')" id="tab-helyszinek">
+        🏟 Helyszínek <span class="tab-badge" id="badge-helyszinek">0</span>
+      </button>
+      <button class="tab" onclick="switchTab('palyas')" id="tab-palyas">
+        ⚽ Pályák <span class="tab-badge orange" id="badge-palyas">0</span>
+      </button>
+    </div>
+
+    <div id="section-helyszinek" class="section active">
+      <div class="section-title">Helyszín jóváhagyások</div>
+      <div id="helyszinekList"></div>
+    </div>
+
+    <div id="section-palyas" class="section">
+      <div class="section-title">Pálya jóváhagyások</div>
+      <div id="palyakList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script data-cfasync="false">
+const SUPABASE_URL = 'https://amowwfjxeursokkznmxl.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtb3d3Zmp4ZXVyc29ra3pubXhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDE4NzQsImV4cCI6MjA4OTkxNzg3NH0.eajpxK96IAF-4XVIv4JALYZ-LqCqXaxU7GIaAE0T5L0';
+const ADMIN_EMAIL = 'info@sportingo.hu'; // ← cseréld a saját admin emailedre
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentUser = null;
+
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) { currentUser = session.user; showApp(); }
+}
+init();
+
+async function doLogin() {
+  const email = document.getElementById('emailInput').value.trim();
+  const pw = document.getElementById('passwordInput').value;
+  if (!email || !pw) { showLoginAlert('Töltsd ki az összes mezőt!'); return; }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+  if (error) { showLoginAlert('Hibás email vagy jelszó!'); return; }
+  currentUser = data.user;
+  showApp();
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  location.reload();
+}
+
+function showApp() {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('appPage').style.display = 'block';
+  document.getElementById('userChip').textContent = currentUser.email;
+  loadAll();
+}
+
+function showLoginAlert(msg) {
+  const el = document.getElementById('loginAlert');
+  el.className = 'alert error';
+  el.textContent = msg;
+}
+
+// ── ADATOK BETÖLTÉSE ──
+async function loadAll() {
+  await Promise.all([loadHelyszinek(), loadPalyas()]);
+}
+
+async function loadHelyszinek() {
+  const { data } = await sb.from('helyszinek')
+    .select('*, tulajdonos_user_id')
+    .order('created_at', { ascending: false });
+  renderList('helyszinekList', data || [], 'helyszin');
+  const varakozik = (data || []).filter(x => x.statusz === 'varakozik').length;
+  document.getElementById('badge-helyszinek').textContent = varakozik;
+  document.getElementById('badge-helyszinek').style.display = varakozik ? 'inline' : 'none';
+}
+
+async function loadPalyas() {
+  const { data } = await sb.from('palyas')
+    .select('*')
+    .order('created_at', { ascending: false });
+  renderList('palyakList', data || [], 'palya');
+  const varakozik = (data || []).filter(x => x.statusz === 'varakozik').length;
+  document.getElementById('badge-palyas').textContent = varakozik;
+  document.getElementById('badge-palyas').style.display = varakozik ? 'inline' : 'none';
+}
+
+function renderList(containerId, items, tipus) {
+  const el = document.getElementById(containerId);
+  if (!items.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">Nincs jóváhagyásra váró tétel</div></div>`;
+    return;
+  }
+  // Sorrendben: először varakozik, aztán a többi
+  const sorted = [...items].sort((a, b) => {
+    const order = { varakozik: 0, jovahagyva: 1, elutasitva: 2 };
+    return (order[a.statusz] ?? 1) - (order[b.statusz] ?? 1);
+  });
+
+  el.innerHTML = sorted.map(item => {
+    const statusz = item.statusz || 'jovahagyva';
+    const statuszLabel = statusz === 'varakozik' ? '⏳ Jóváhagyásra vár' : statusz === 'jovahagyva' ? '✅ Jóváhagyva' : '❌ Elutasítva';
+    const details = tipus === 'helyszin'
+      ? `<div><span>Város:</span> ${item.varos || '–'}</div>
+         <div><span>Cím:</span> ${item.helyszin || '–'}</div>
+         <div><span>Email:</span> ${item.foglalasi_email || '–'}</div>
+         <div><span>Telefon:</span> ${item.telefon || '–'}</div>
+         <div><span>Website:</span> ${item.website || '–'}</div>
+         <div><span>Nyitvatartás:</span> ${item.nyitvatartas_szoveg || '–'}</div>`
+      : `<div><span>Borítás:</span> ${item.boritas || '–'}</div>
+         <div><span>Fedett:</span> ${item.fedett || '–'}</div>
+         <div><span>Sportág:</span> ${item.sportag || '–'}</div>
+         <div><span>Ár:</span> ${item.ar_per_ora ? item.ar_per_ora + ' Ft/óra' : '–'}</div>
+         <div><span>Helyszín:</span> ${item.helyszin || '–'}</div>`;
+
+    const actions = statusz === 'varakozik'
+      ? `<button class="btn-approve" onclick="updateStatusz('${item.id}','jovahagyva','${tipus}')">✅ Jóváhagyás</button>
+         <button class="btn-reject" onclick="updateStatusz('${item.id}','elutasitva','${tipus}')">❌ Elutasítás</button>`
+      : `<button class="btn-undo" onclick="updateStatusz('${item.id}','varakozik','${tipus}')">↩ Visszavon</button>`;
+
+    return `<div class="item-card ${statusz}" id="card-${item.id}">
+      <div class="item-header">
+        <div>
+          <div class="item-name">${item.nev || '(névtelen)'}</div>
+          <div class="item-meta">
+            <span>${new Date(item.created_at).toLocaleDateString('hu-HU')}</span>
+            ${item.varos ? `<span>📍 ${item.varos}</span>` : ''}
+          </div>
+        </div>
+        <span class="status-pill ${statusz}">${statuszLabel}</span>
+      </div>
+      <div class="item-details">${details}</div>
+      <div class="item-actions">${actions}</div>
+    </div>`;
+  }).join('');
+}
+
+async function updateStatusz(id, ujStatusz, tipus) {
+  const tabla = tipus === 'helyszin' ? 'helyszinek' : 'palyas';
+  const { error } = await sb.from(tabla).update({ statusz: ujStatusz }).eq('id', id);
+  if (error) { showToast('❌ Hiba: ' + error.message); return; }
+
+  const label = ujStatusz === 'jovahagyva' ? 'Jóváhagyva ✅' : ujStatusz === 'elutasitva' ? 'Elutasítva ❌' : 'Visszavonva';
+  showToast(label);
+
+  // Email küldés tulajdonosnak jóváhagyáskor/elutasításkor
+  if (ujStatusz === 'jovahagyva' || ujStatusz === 'elutasitva') {
+    const { data: item } = await sb.from(tabla).select('*').eq('id', id).single();
+    if (item) await sendOwnerNotification(item, tipus, ujStatusz);
+  }
+
+  if (tipus === 'helyszin') loadHelyszinek();
+  else loadPalyas();
+}
+
+// ── EMAIL KÜLDÉS ──
+async function sendOwnerNotification(item, tipus, statusz) {
+  try {
+    // Tulajdonos emailjét a auth.users táblából kellene kérni,
+    // de anon key-jel nem érhető el – ezért a foglalasi_email-re küldjük
+    const toEmail = item.foglalasi_email || null;
+    if (!toEmail) return;
+
+    const approved = statusz === 'jovahagyva';
+    const subject = approved
+      ? `✅ ${tipus === 'helyszin' ? 'Helyszíned' : 'Pályád'} jóváhagyva: ${item.nev}`
+      : `❌ ${tipus === 'helyszin' ? 'Helyszíned' : 'Pályád'} nem kerül fel: ${item.nev}`;
+    const html = `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f0f7fb;padding:20px;">
+      <div style="max-width:500px;margin:0 auto;background:white;border-radius:16px;padding:24px;">
+        <div style="background:linear-gradient(135deg,#1a8fc1,#2dbf7e);border-radius:10px;padding:16px;text-align:center;margin-bottom:20px;">
+          <div style="font-size:24px;">${approved ? '✅' : '❌'}</div>
+          <div style="color:white;font-weight:800;font-size:16px;margin-top:6px;">Sportingo</div>
+        </div>
+        <h2 style="color:#0a1628;">${approved ? 'Jóváhagyva!' : 'Sajnos nem kerül fel'}</h2>
+        <p style="color:#6b8a9a;font-size:14px;margin:8px 0 16px;">
+          ${approved
+            ? `A(z) <strong>${item.nev}</strong> ${tipus === 'helyszin' ? 'helyszíned' : 'pályád'} jóváhagyásra került és már megjelenik a Sportingo weboldalán.`
+            : `A(z) <strong>${item.nev}</strong> ${tipus === 'helyszin' ? 'helyszíned' : 'pályád'} sajnos nem felel meg a feltételeinknek. Kérdéssel fordulj hozzánk: info@sportingo.hu`}
+        </p>
+        ${approved ? `<a href="https://sportingo.hu" style="display:block;text-align:center;background:linear-gradient(135deg,#1a8fc1,#2dbf7e);color:white;font-weight:700;padding:12px;border-radius:10px;text-decoration:none;">→ Megtekintés a weboldalon</a>` : ''}
+        <p style="color:#b0c4ce;font-size:11px;text-align:center;margin-top:16px;">Sportingo · sportingo.hu</p>
+      </div>
+    </body></html>`;
+
+    await fetch('https://amowwfjxeursokkznmxl.supabase.co/functions/v1/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY },
+      body: JSON.stringify({ to: toEmail, subject, html })
+    });
+  } catch(e) { console.warn('Email hiba:', e); }
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('section-' + tab).classList.add('active');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>

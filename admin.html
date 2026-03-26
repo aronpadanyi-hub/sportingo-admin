@@ -138,14 +138,24 @@
 <script data-cfasync="false">
 const SUPABASE_URL = 'https://amowwfjxeursokkznmxl.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtb3d3Zmp4ZXVyc29ra3pubXhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDE4NzQsImV4cCI6MjA4OTkxNzg3NH0.eajpxK96IAF-4XVIv4JALYZ-LqCqXaxU7GIaAE0T5L0';
-const ADMIN_EMAIL = 'info@sportingo.hu'; // ← cseréld a saját admin emailedre
+const ADMIN_EMAIL = 'admin@sportingo.hu'; // ← cseréld a saját admin emailedre
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 
+function isAdminUser(user) {
+  return user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+}
+
 async function init() {
   const { data: { session } } = await sb.auth.getSession();
-  if (session) { currentUser = session.user; showApp(); }
+  if (session && isAdminUser(session.user)) {
+    currentUser = session.user;
+    showApp();
+  } else if (session) {
+    await sb.auth.signOut();
+    showLoginAlert('Nincs admin jogosultságod.');
+  }
 }
 init();
 
@@ -155,6 +165,11 @@ async function doLogin() {
   if (!email || !pw) { showLoginAlert('Töltsd ki az összes mezőt!'); return; }
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
   if (error) { showLoginAlert('Hibás email vagy jelszó!'); return; }
+  if (!isAdminUser(data.user)) {
+    await sb.auth.signOut();
+    showLoginAlert('Nincs admin jogosultságod.');
+    return;
+  }
   currentUser = data.user;
   showApp();
 }
@@ -187,7 +202,7 @@ async function loadHelyszinek() {
     .select('*, tulajdonos_user_id')
     .order('created_at', { ascending: false });
   renderList('helyszinekList', data || [], 'helyszin');
-  const varakozik = (data || []).filter(x => x.statusz === 'varakozik').length;
+  const varakozik = (data || []).filter(x => (x.statusz ?? 'varakozik') === 'varakozik').length;
   document.getElementById('badge-helyszinek').textContent = varakozik;
   document.getElementById('badge-helyszinek').style.display = varakozik ? 'inline' : 'none';
 }
@@ -197,7 +212,7 @@ async function loadPalyas() {
     .select('*')
     .order('created_at', { ascending: false });
   renderList('palyakList', data || [], 'palya');
-  const varakozik = (data || []).filter(x => x.statusz === 'varakozik').length;
+  const varakozik = (data || []).filter(x => (x.statusz ?? 'varakozik') === 'varakozik').length;
   document.getElementById('badge-palyas').textContent = varakozik;
   document.getElementById('badge-palyas').style.display = varakozik ? 'inline' : 'none';
 }
@@ -211,11 +226,13 @@ function renderList(containerId, items, tipus) {
   // Sorrendben: először varakozik, aztán a többi
   const sorted = [...items].sort((a, b) => {
     const order = { varakozik: 0, jovahagyva: 1, elutasitva: 2 };
-    return (order[a.statusz] ?? 1) - (order[b.statusz] ?? 1);
+    const aStatusz = a.statusz ?? 'varakozik';
+    const bStatusz = b.statusz ?? 'varakozik';
+    return order[aStatusz] - order[bStatusz];
   });
 
   el.innerHTML = sorted.map(item => {
-    const statusz = item.statusz || 'jovahagyva';
+    const statusz = item.statusz ?? 'varakozik';
     const statuszLabel = statusz === 'varakozik' ? '⏳ Jóváhagyásra vár' : statusz === 'jovahagyva' ? '✅ Jóváhagyva' : '❌ Elutasítva';
     const details = tipus === 'helyszin'
       ? `<div><span>Város:</span> ${item.varos || '–'}</div>
